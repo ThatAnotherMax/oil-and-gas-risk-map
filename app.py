@@ -17,8 +17,7 @@ def fullmap():
         varname="fullmap",
         lat=48.383022,
         lng=31.1828699,
-        zoom=6.5,
-        drawing=False
+        zoom=6.5
     )
     return render_template('fullmap.html', **map_params)
 
@@ -29,10 +28,9 @@ def drawing():
         varname="fullmap",
         lat=48.383022,
         lng=31.1828699,
-        zoom=6.5,
-        drawing=True
+        zoom=6.5
     )
-    return render_template('fullmap.html', **map_params)
+    return render_template('drawing.html', **map_params)
 
 
 if __name__ == "__main__":
