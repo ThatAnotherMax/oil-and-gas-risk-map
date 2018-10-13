@@ -32,9 +32,14 @@
     <body>
         <div id="{{identifier}}" class="map"></div>
 
-        <div id="info" class="info">
-            <h1>Objects json</h1>
-            <textarea id="info-ta"></textarea>
+        <div id="info">
+            <h1>Json IN</h1>
+            <textarea id="data-in-ta"></textarea>
+            <br>
+            <input id="btn-render" type="button" value="Render">
+
+            <h1>Json OUT</h1>
+            <textarea id="data-out-ta"></textarea>
         </div>
         
         <script type="text/javascript">
@@ -88,7 +93,7 @@
                 drawingManager.setMap({{varname}});
 
                 google.maps.event.addListener(drawingManager, 'overlaycomplete', function(event) {
-                    var info_textarea = document.getElementById('info-ta');
+                    var info_textarea = document.getElementById('data-out-ta');
 
                     if (info_textarea === null) {
                         return;
@@ -117,7 +122,13 @@
 
                     info_textarea.value = renderData(gis_data);
                 });
-                     
+
+                function onClick() {
+                    document.getElementById("data-in-ta").innerHTML = "YOU CLICKED RENDER!";
+                }
+                
+                document.getElementById("btn-render").addEventListener("click", onClick);
+
             }          
         </script>
 

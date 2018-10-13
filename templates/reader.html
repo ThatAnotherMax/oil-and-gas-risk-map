@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+    <html>
+    <head>
+        <title>FullMap</title>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <link rel="stylesheet" href="">
+        <style type="text/css">
+            #{{identifier}} {
+                height:100%;
+                width:100%;
+                top:0;
+                left:0;
+                position:absolute;
+                z-index:200;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="{{identifier}}" class="map"></div>
+        
+        <script type="text/javascript">
+            var fullmap = null;
+
+            var circles = [
+            {% for circle_data in data.circles %}
+                {
+                    radius: {{circle_data.radius}},
+                    center: {
+                        lat: {{circle_data.center.lat}},
+                        lng: {{circle_data.center.lng}}, 
+                    }
+                },
+            {% endfor %}
+            ];
+
+            var polylines = [
+            {% for polyline_data in data.polylines %}
+                [
+                {% for path_data in polyline_data.path %}
+                    {
+                       lat: {{path_data.lat}},
+                        lng: {{path_data.lng}},  
+                    },
+                {% endfor %}
+                ],
+            {% endfor %}
+            ];
+
+            function initMap() {
+                document.getElementById('{{identifier}}').style.display = 'block';
+                var {{varname}} = new google.maps.Map(
+                document.getElementById('{{identifier}}'), {
+                    center: new google.maps.LatLng(
+                        {{lat}}, 
+                        {{lng}}
+                    ),
+                    zoom: {{zoom}},
+                    mapTypeId: google.maps.MapTypeId.ROADMAP,
+                    zoomControl: true,
+                    mapTypeControl: true,
+                    scaleControl: true,
+                    streetViewControl: true,
+                    rotateControl: true,
+                    scrollwheel: true,
+                    fullscreenControl: true
+                }); 
+
+                for (var circle in circles) {
+                    var mapCircle = new google.maps.Circle({
+                        strokeColor: '#FF0000',
+                        strokeOpacity: 0.8,
+                        strokeWeight: 2,
+                        fillColor: '#FF0000',
+                        fillOpacity: 0.35,
+                        map: {{varname}},
+                        center: circles[circle].center,
+                        radius: circles[circle].radius
+                    });   
+                }
+
+                for (var polyline in polylines) {
+                    var mapCircle = new google.maps.Polyline({
+                        path: polylines[polyline],
+                        geodesic: true,
+                        strokeColor: '#FF0000',
+                        strokeOpacity: 1.0,
+                        strokeWeight: 2,
+                        map: {{varname}}
+                    }); 
+                }
+  
+            }          
+        </script>
+
+        <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD7uRVSlRJRCICowKelW5zurV9PTs3HYGE&libraries=drawing&callback=initMap"
+         async defer></script>
+    </body>
+</html>
+
