@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+    <html>
+    <head>
+        <title>FullMap</title>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <link rel="stylesheet" href="">
+        <style type="text/css">
+            #{{identifier}} {
+                height:100%;
+                width:100%;
+                top:0;
+                left:0;
+                position:absolute;
+                z-index:200;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="{{identifier}}" class="map"></div>
+        
+        <script type="text/javascript">
+            var fullmap = null;
+
+            function initMap() {
+                document.getElementById('{{identifier}}').style.display = 'block';
+                {{varname}} = new google.maps.Map(
+                document.getElementById('{{identifier}}'), {
+                    center: new google.maps.LatLng(
+                        {{lat}}, 
+                        {{lng}}
+                    ),
+                    zoom: {{zoom}},
+                    mapTypeId: google.maps.MapTypeId.ROADMAP,
+                    zoomControl: true,
+                    mapTypeControl: true,
+                    scaleControl: true,
+                    streetViewControl: true,
+                    rotateControl: true,
+                    scrollwheel: true,
+                    fullscreenControl: true
+                });
+
+                {% if drawing %}
+                    var drawingManager = new google.maps.drawing.DrawingManager({
+                      drawingMode: google.maps.drawing.OverlayType.MARKER,
+                      drawingControl: true,
+                      drawingControlOptions: {
+                        position: google.maps.ControlPosition.TOP_CENTER,
+                        drawingModes: ['marker', 'circle', 'polygon', 'polyline', 'rectangle']
+                      },
+                      markerOptions: {icon: 'https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png'},
+                      circleOptions: {
+                        fillColor: '#ffff00',
+                        fillOpacity: 1,
+                        strokeWeight: 5,
+                        clickable: false,
+                        editable: true,
+                        zIndex: 1
+                      }
+                    });
+                    drawingManager.setMap({{varname}});
+
+                    google.maps.event.addListener(drawingManager, 'circlecomplete', function(circle) {
+                      var radius = circle.getRadius();
+                      var center = circle.getCenter();
+                      alert("Center = " + center + " | Radius = " + radius + " meters");
+                    });
+                {%  endif %}                       
+            }          
+        </script>
+
+        <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD7uRVSlRJRCICowKelW5zurV9PTs3HYGE&libraries=drawing&callback=initMap"
+         async defer></script>
+    </body>
+</html>
+
