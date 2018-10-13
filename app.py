@@ -1,13 +1,12 @@
 # coding: utf-8
 
+import settings
 from flask import Flask, render_template, Markup
 
 app = Flask(__name__, template_folder="templates")
 
-API_KEY = "AIzaSyD7uRVSlRJRCICowKelW5zurV9PTs3HYGE"
-
 # you can set key as config
-app.config['GOOGLEMAPS_KEY'] = API_KEY
+app.config['GOOGLEMAPS_KEY'] = settings.API_KEY
 
 
 @app.route('/')
