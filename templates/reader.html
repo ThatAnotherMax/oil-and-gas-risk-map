@@ -22,35 +22,23 @@
         <script type="text/javascript">
             var fullmap = null;
 
-            var circles = [
-            {% for circle_data in data.circles %}
-                {
-                    radius: {{circle_data.radius}},
-                    center: {
-                        lat: {{circle_data.center.lat}},
-                        lng: {{circle_data.center.lng}}, 
-                    }
-                },
-            {% endfor %}
-            ];
+            var gis_data = {
+                polylines: [],
+                circles: [],
+            };
 
-            var polylines = [
-            {% for polyline_data in data.polylines %}
-                [
-                {% for path_data in polyline_data.path %}
-                    {
-                       lat: {{path_data.lat}},
-                        lng: {{path_data.lng}},  
-                    },
-                {% endfor %}
-                ],
-            {% endfor %}
-            ];
+            function getDefault(dict, key, default_value=null) {
+                if (dict.hasOwnProperty(key) === false) {
+                    return default_value;
+                } else {
+                    return dict[key];
+                }
+            }
 
             function initMap() {
                 document.getElementById('{{identifier}}').style.display = 'block';
                 var {{varname}} = new google.maps.Map(
-                document.getElementById('{{identifier}}'), {
+                    document.getElementById('{{identifier}}'), {
                     center: new google.maps.LatLng(
                         {{lat}}, 
                         {{lng}}
@@ -66,28 +54,21 @@
                     fullscreenControl: true
                 }); 
 
-                for (var circle in circles) {
-                    var mapCircle = new google.maps.Circle({
-                        strokeColor: '#FF0000',
-                        strokeOpacity: 0.8,
-                        strokeWeight: 2,
-                        fillColor: '#FF0000',
-                        fillOpacity: 0.35,
-                        map: {{varname}},
-                        center: circles[circle].center,
-                        radius: circles[circle].radius
-                    });   
-                }
+                var gis_data = {{data|tojson|safe}};
 
-                for (var polyline in polylines) {
-                    var mapCircle = new google.maps.Polyline({
-                        path: polylines[polyline],
-                        geodesic: true,
-                        strokeColor: '#FF0000',
-                        strokeOpacity: 1.0,
-                        strokeWeight: 2,
-                        map: {{varname}}
-                    }); 
+                for (var i = 0; i < gis_data.polylines.length; i++) {
+                    var polylineOptions = getDefault(gis_data.polylines[i], 'polylineOptions', {});
+
+                    {{varname}}_polyline = new google.maps.Polyline({
+                        strokeColor: getDefault(polylineOptions, "strokeColor", "#FF0000"),
+                        strokeOpacity: getDefault(polylineOptions, "strokeOpacity", 1.0),
+                        strokeWeight: getDefault(polylineOptions, "strokeWeight", 2),
+
+                        path: gis_data.polylines[i].path,
+                        map: {{varname}},
+                        geodesic: true
+                    });
+
                 }
   
             }          

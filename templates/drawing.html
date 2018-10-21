@@ -23,7 +23,7 @@
                 left:70%;
                 position:absolute;
                 z-index:200;
-                padding: 10px;
+                /*padding: 10px;*/
                 font-family: Verdana;
                 color: white;
             }
@@ -33,13 +33,52 @@
         <div id="{{identifier}}" class="map"></div>
 
         <div id="info">
-            <h1>Json IN</h1>
-            <textarea id="data-in-ta"></textarea>
-            <br>
-            <input id="btn-render" type="button" value="Render">
+            {% with messages = get_flashed_messages() %}
+              {% if messages %}
+                <ul class=flashes>
+                {% for message in messages %}
+                  <li>{{ message }}</li>
+                {% endfor %}
+                </ul>
+              {% endif %}
+            {% endwith %}
 
-            <h1>Json OUT</h1>
-            <textarea id="data-out-ta"></textarea>
+            <form method=post enctype="multipart/form-data">
+                <fieldset>
+                    <legend>IN</legend>
+                    <input  type="file" name="file"><br>
+                    <input type="submit" value="Open">
+                </fieldset>
+            </form>
+
+            <form method="post" action="save">
+                <fieldset>
+                    <legend>OUT</legend>
+                    File:<br>
+                    {% if fname %}
+                        <input type="text" name="fname" value="{{fname}}"><br>
+                    {% else %} 
+                        <input type="text" name="fname" value="data.json"><br>
+                    {% endif %}
+                    Data:<br>
+                    <textarea id="data-out-ta" name="data-out-json"></textarea><br>
+                    <input type="submit" value="Save">
+                </fieldset>
+            </form>
+
+            <fieldset>
+                <legend>EDIT</legend>
+                <input type="checkbox" id="edit-delete">delete on click<br>
+            </fieldset> 
+
+            <fieldset>
+                <legend>POLYLINE</legend>
+                strokeColor: <input type="text" id="polyline-strokeColor" value="#FF0000"><br>
+                strokeOpacity: <input type="text" id="polyline-strokeOpacity" value="1.0"><br>
+                strokeWeight: <input type="text" id="polyline-strokeWeight" value="5"><br>
+                <button onclick="updateDrawindManager()">Update</button>
+            </fieldset> 
+
         </div>
         
         <script type="text/javascript">
@@ -50,8 +89,28 @@
                 circles: [],
             };
 
+            var drawingManager = null;
+
+            function updateDrawindManager() {
+                drawingManager.setOptions({
+                    polylineOptions: {
+                        strokeColor: document.getElementById('polyline-strokeColor').value,
+                        strokeOpacity: document.getElementById('polyline-strokeOpacity').value,
+                        strokeWeight: document.getElementById('polyline-strokeWeight').value,
+                    },
+                });
+            }
+
             function renderData(data) {
                 return JSON.stringify(data, null, 2);
+            }
+
+            function getDefault(dict, key, default_value=null) {
+                if (dict.hasOwnProperty(key) === false) {
+                    return default_value;
+                } else {
+                    return dict[key];
+                }
             }
 
             function initMap() {
@@ -73,26 +132,98 @@
                     fullscreenControl: true
                 });
 
-                var drawingManager = new google.maps.drawing.DrawingManager({
+                function setupPolylineDeleteOnClick(polyline, map, data) {
+                    google.maps.event.addListener(polyline, 'click', function(e) {
+                        if (document.getElementById('edit-delete').checked === true) {
+                            polyline.setMap(null);
+                            var path = polyline.getPath();
+
+                            var polyline_index = null;
+
+                            for (var pi = 0; pi < data.polylines.length; pi++) {
+                                var cur_polyline = data.polylines[pi];
+
+                                var valid = true;
+                                for (var pp = 0; pp < cur_polyline.path.length; pp++) {
+                                    var element = cur_polyline.path[pp];
+                                    var poly_elem = path.getAt(pp);
+
+                                    // alert(JSON.stringify(element) + "\n" + JSON.stringify(poly_elem) + "\n lng " + (element.lng === poly_elem.lng()) +  "\n lat " + (element.lat === poly_elem.lat()));
+
+                                    if (element.lng !== poly_elem.lng() || element.lat !== poly_elem.lat()) {
+                                        valid = false;
+                                        break;
+                                    }
+
+
+                                }
+
+                                if (valid === true) {
+                                    polyline_index = pi;
+                                }
+                            }
+
+                            if (polyline_index !== null) {
+                                data.polylines.splice(polyline_index, 1);
+                            }
+
+                            document.getElementById('data-out-ta').value = renderData(data);
+                        }
+                    });
+                }
+
+                {% if data %}
+
+                    var info_textarea = document.getElementById('data-out-ta');
+                    
+                    var gis_data = {{data|tojson|safe}};
+
+                    for (var i = 0; i < gis_data.polylines.length; i++) {
+                        var polylineOptions = getDefault(gis_data.polylines[i], 'polylineOptions', {});
+
+                        {{varname}}_polyline = new google.maps.Polyline({
+                            strokeColor: getDefault(polylineOptions, "strokeColor", document.getElementById('polyline-strokeColor').value),
+                            strokeOpacity: getDefault(polylineOptions, "strokeOpacity", document.getElementById('polyline-strokeOpacity').value),
+                            strokeWeight: getDefault(polylineOptions, "strokeWeight", document.getElementById('polyline-strokeWeight').value),
+
+                            path: gis_data.polylines[i].path,
+                            map: {{varname}},
+                            geodesic: true
+                        });
+
+                        setupPolylineDeleteOnClick({{varname}}_polyline, {{varname}}, gis_data, i);
+
+                    }
+
+                    info_textarea.value = renderData(gis_data);
+
+                {% endif %}
+
+                drawingManager = new google.maps.drawing.DrawingManager({
                   drawingMode: google.maps.drawing.OverlayType.MARKER,
                   drawingControl: true,
                   drawingControlOptions: {
                     position: google.maps.ControlPosition.TOP_CENTER,
-                    drawingModes: ['marker', 'circle', 'polygon', 'polyline', 'rectangle']
+                    // drawingModes: ['marker', 'circle', 'polygon', 'polyline', 'rectangle']
+                    drawingModes: ['polygon', 'polyline']
                   },
-                  markerOptions: {icon: 'https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png'},
-                  circleOptions: {
-                    fillColor: '#ffff00',
-                    fillOpacity: 1,
-                    strokeWeight: 5,
-                    clickable: false,
-                    editable: true,
-                    zIndex: 1
-                  }
+                  // markerOptions: {icon: 'https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png'},
+                  // circleOptions: {
+                  //   fillColor: '#ffff00',
+                  //   fillOpacity: 1,
+                  //   strokeWeight: 5,
+                  //   clickable: false,
+                  //   editable: true,
+                  //   zIndex: 1
+                  // }
                 });
                 drawingManager.setMap({{varname}});
 
+                updateDrawindManager();
+
                 google.maps.event.addListener(drawingManager, 'overlaycomplete', function(event) {
+                    var map_overlay = event.overlay;
+
                     var info_textarea = document.getElementById('data-out-ta');
 
                     if (info_textarea === null) {
@@ -100,35 +231,37 @@
                     }
 
                     if (event.type == 'circle') {
-                        var radius = event.overlay.getRadius();
-                        var center = event.overlay.getCenter();
+                        var radius = map_overlay.getRadius();
+                        var center = map_overlay.getCenter();
 
                         gis_data.circles.push({
                             radius: radius,
                             center: center
                         })
                     } else if (event.type == 'polyline') {
-                        var path = event.overlay.getPath();
+                        var path = map_overlay.getPath();
 
                         var result = [];
                         path.forEach(function(element, index) {
                             result.push(element);
-                        })
+                        });
+
+                        var polyline_index = gis_data.polylines.length;
 
                         gis_data.polylines.push({
-                            path: result
-                        })
+                            path: result,
+                            polylineOptions: {
+                                strokeColor: document.getElementById('polyline-strokeColor').value,
+                                strokeOpacity: document.getElementById('polyline-strokeOpacity').value,
+                                strokeWeight: document.getElementById('polyline-strokeWeight').value,
+                            },
+                        });
+
+                        setupPolylineDeleteOnClick(map_overlay, {{varname}}, gis_data, polyline_index);
                     }
 
                     info_textarea.value = renderData(gis_data);
                 });
-
-                function onClick() {
-                    document.getElementById("data-in-ta").innerHTML = "YOU CLICKED RENDER!";
-                }
-                
-                document.getElementById("btn-render").addEventListener("click", onClick);
-
             }          
         </script>
 
