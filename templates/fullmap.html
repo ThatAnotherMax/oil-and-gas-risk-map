@@ -1,50 +1,198 @@
-<!DOCTYPE html>
-    <html>
-    <head>
-        <title>FullMap</title>
-        <meta charset="utf-8">
-        <meta http-equiv="X-UA-Compatible" content="IE=edge">
-        <link rel="stylesheet" href="">
+{% extends "layout.html" %}
+{% block title %}Аварії{% endblock %}
+{% block head %}
+        {{ super() }}
         <style type="text/css">
             #{{identifier}} {
-                height:100%;
                 width:100%;
-                top:0;
-                left:0;
-                position:absolute;
-                z-index:200;
+                height:650px;
+            }
+
+            #form-test input[type=text], select {
+                width: 100%;
+                padding: 12px 20px;
+                margin: 8px 0;
+                display: inline-block;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                box-sizing: border-box;
+            }
+
+            #form-test input[type=submit] {
+                width: 100%;
+                background-color: #4CAF50;
+                /*background-color: #333;*/
+                color: white;
+                padding: 14px 20px;
+                margin: 8px 0;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+            }
+
+            #form-test input[type=submit]:hover {
+                background-color: #45a049;
+                /*background-color: #ddd;*/
+                /*color: black;*/
+            }
+
+            #form-test div {
+                border-radius: 5px;
+                background-color: #f2f2f2;
+                padding: 20px;
+            }
+
+            #form-test button {
+                width: 100%;
+                background-color: #4CAF50;
+                /*background-color: #333;*/
+                color: white;
+                padding: 14px 20px;
+                margin: 8px 0;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+            }
+
+            #form-test button:hover {
+                background-color: #45a049;
+                /*background-color: #ddd;*/
+                /*color: black;*/
             }
         </style>
-    </head>
-    <body>
-        <div id="{{identifier}}" class="map"></div>
-        
-        <script type="text/javascript">
-            var fullmap = null;
+{% endblock %}
 
-            function initMap() {
-                document.getElementById('{{identifier}}').style.display = 'block';
-                {{varname}} = new google.maps.Map(
-                document.getElementById('{{identifier}}'), {
-                    center: new google.maps.LatLng(
-                        {{lat}}, 
-                        {{lng}}
-                    ),
-                    zoom: {{zoom}},
-                    mapTypeId: google.maps.MapTypeId.ROADMAP,
-                    zoomControl: true,
-                    mapTypeControl: true,
-                    scaleControl: true,
-                    streetViewControl: true,
-                    rotateControl: true,
-                    scrollwheel: true,
-                    fullscreenControl: true
-                });                    
-            }          
-        </script>
+{% block menu %}
+<a href="/drawing">Редактор</a>
+<a href="/reader">Відображення</a>
+{% endblock %}
 
-        <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD7uRVSlRJRCICowKelW5zurV9PTs3HYGE&libraries=drawing&callback=initMap"
-         async defer></script>
-    </body>
-</html>
+{% block content %}
+        <div class="card">
+            <div id="{{identifier}}" class="map"></div>
+        </div>
+
+            <script type="text/javascript">
+                var fullmap = null;
+
+                function initMap() {
+                    document.getElementById('{{identifier}}').style.display = 'block';
+                    {{varname}} = new google.maps.Map(
+                    document.getElementById('{{identifier}}'), {
+                        center: new google.maps.LatLng(
+                            {{lat}}, 
+                            {{lng}}
+                        ),
+                        zoom: {{zoom}},
+                        mapTypeId: google.maps.MapTypeId.ROADMAP,
+                        zoomControl: true,
+                        mapTypeControl: true,
+                        scaleControl: true,
+                        streetViewControl: true,
+                        rotateControl: true,
+                        scrollwheel: true,
+                        fullscreenControl: true
+                    });    
+                    {{varname}}.setOptions({
+                        minZoom: {{minZoom}}
+                    });
+
+                    drawingManager = new google.maps.drawing.DrawingManager({
+                        drawingMode: google.maps.drawing.OverlayType.MARKER,
+                        drawingControl: true,
+                        drawingControlOptions: {
+                            position: google.maps.ControlPosition.TOP_CENTER,
+                            drawingModes: ['polygon', 'polyline']
+                        },
+                    });
+
+                    drawingManager.setMap({{varname}});
+
+
+                }          
+            </script>
+
+            <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD7uRVSlRJRCICowKelW5zurV9PTs3HYGE&libraries=drawing&callback=initMap"
+             async defer></script>
+{% endblock %}
+{% block gui %}
+                <div class="card">
+                    <div id="form-test">
+                        <!-- <form action=""> -->
+                            <label for="pipeline">Категорія проводу</label>
+                            <select id="pipeline" name="pipeline">
+                                <option value="gas">Газопровод</option>
+                                <option value="oil">Нафтопровод</option>
+                            </select>
+
+                            <label for="accident">Тип аварії</label>
+                            <select id="accident" name="accident" onchange="myFunction()">
+                                <option disabled selected value> -- виберіть аварію -- </option>
+                                <option value="a1">Аварія 1</option>
+                                <option value="a2">Аварія 2</option>
+                            </select>
+                            <!-- <input type="submit" value="Submit"> -->
+                            <!-- <button onclick="myFunction()">Try it</button> -->
+                        <!-- </form> -->
+                        
+                    </div>
+                </div>
+
+                <div id="a1-gui" class="card">
+                    <div id="form-test">
+                        <form action="">
+                            <h4>Аварія 1</h4>
+                            <label for="fname">Площа</label>
+                            <input type="text" id="fname" name="firstname" placeholder="0.0">
+
+                            <label for="lname">Кількість населення</label>
+                            <input type="text" id="lname" name="lastname" placeholder="0">
+
+                            <input type="submit" value="Submit">
+                        </form>
+                    </div>
+                </div>
+
+                <div id="a2-gui" class="card">
+                    <div id="form-test">
+                        <form action="">
+                            <h4>Аварія 2</h4>
+                            <label for="fname">Площа</label>
+                            <input type="text" id="fname" name="firstname" placeholder="0.0">
+
+                            <label for="lname">Кількість населення</label>
+                            <input type="text" id="lname" name="lastname" placeholder="0">
+
+                            <input type="submit" value="Submit">
+                        </form>
+                    </div>
+                </div>
+
+
+                <script>
+                var guis = {
+                    "a1": "a1-gui",
+                    "a2": "a2-gui",
+                }
+
+                for (var key in guis) {
+                    var a_gui = document.getElementById(guis[key]);
+                    a_gui.style.display = "none";
+                }
+                
+                function myFunction() {
+                    var a_key_selected = document.getElementById("accident").value;
+
+                    for (var key in guis) {
+                        var a_gui = document.getElementById(guis[key]);
+                        if (key == a_key_selected) {
+                            a_gui.style.display = "block";
+                        } else {
+                            a_gui.style.display = "none";
+                        }
+                    }
+                }
+                </script>
+{% endblock %}}
+
 
