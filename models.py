@@ -1,6 +1,9 @@
 class AccidentModel(object):
     pass
 
-class AccidentA(AccidentModel):
+class Accident1(AccidentModel):
+    pass
+
+class Accident2(AccidentModel):
     pass
 

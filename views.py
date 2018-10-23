@@ -6,7 +6,7 @@ from flask import render_template, Markup, flash, request, redirect, url_for
 from werkzeug.utils import secure_filename
 
 from app import app
-from utils import DataManager
+from utils import DataManager, AccidentManager
 
 ALLOWED_EXTENSIONS = set(['txt', 'json'])
 
@@ -81,7 +81,7 @@ def reader():
     )
     return render_template('reader.html', **map_params)
 
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
 def fullmap():
     map_params = dict(
         identifier="fullmap",
@@ -89,6 +89,23 @@ def fullmap():
         lat=48.383022,
         lng=31.1828699,
         zoom=6,
-        minZoom=6
+        minZoom=6,
+        data=None,
+        categories=DataManager.getCategories(),
+        category=None,
+        accidents=None
     )
+
+    category = None
+    if request.method == 'POST':
+        category = request.form.get("category")
+        if category is not None:
+            data = DataManager.getCategoryData(category)
+
+            map_params['data'] = data
+            map_params['category'] = category
+
+            accidents = AccidentManager.getAccidentsDescriptions(category)
+            map_params["accidents"] = accidents
+
     return render_template('fullmap.html', **map_params)

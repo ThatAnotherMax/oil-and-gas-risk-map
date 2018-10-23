@@ -75,10 +75,41 @@
             <script type="text/javascript">
                 var fullmap = null;
 
+                var gis_data = {
+                    polylines: [],
+                    circles: [],
+                };
+
+                var accident_data = {
+                    circles: []
+                }
+
+                var last_circle = null;
+
+                var drawingManager = null;
+
+                function updateDrawindManager() {
+                    drawingManager.setOptions({
+                        polylineOptions: {
+                            strokeColor: document.getElementById('polyline-strokeColor').value,
+                            strokeOpacity: document.getElementById('polyline-strokeOpacity').value,
+                            strokeWeight: document.getElementById('polyline-strokeWeight').value,
+                        },
+                    });
+                }
+
+                function getDefault(dict, key, default_value=null) {
+                    if (dict.hasOwnProperty(key) === false) {
+                        return default_value;
+                    } else {
+                        return dict[key];
+                    }
+                }
+
                 function initMap() {
                     document.getElementById('{{identifier}}').style.display = 'block';
-                    {{varname}} = new google.maps.Map(
-                    document.getElementById('{{identifier}}'), {
+
+                    {{varname}} = new google.maps.Map(document.getElementById('{{identifier}}'), {
                         center: new google.maps.LatLng(
                             {{lat}}, 
                             {{lng}}
@@ -92,7 +123,8 @@
                         rotateControl: true,
                         scrollwheel: true,
                         fullscreenControl: true
-                    });    
+                    });
+
                     {{varname}}.setOptions({
                         minZoom: {{minZoom}}
                     });
@@ -102,12 +134,68 @@
                         drawingControl: true,
                         drawingControlOptions: {
                             position: google.maps.ControlPosition.TOP_CENTER,
-                            drawingModes: ['polygon', 'polyline']
+                            drawingModes: ['polygon', 'circle']
                         },
                     });
 
                     drawingManager.setMap({{varname}});
 
+                    {% if data %}
+
+                    var info_textarea = document.getElementById('data-out-ta');
+                    
+                    var gis_data = {{data|tojson|safe}};
+
+                    for (var i = 0; i < gis_data.polylines.length; i++) {
+                        var polylineOptions = getDefault(gis_data.polylines[i], 'polylineOptions', {});
+
+                        {{varname}}_polyline = new google.maps.Polyline({
+                            strokeColor: getDefault(polylineOptions, "strokeColor", "#FF0000"),
+                            strokeOpacity: getDefault(polylineOptions, "strokeOpacity", 1.0),
+                            strokeWeight: getDefault(polylineOptions, "strokeWeight", 2),
+
+                            path: gis_data.polylines[i].path,
+                            map: {{varname}},
+                            geodesic: true
+                        });
+
+                    }
+
+                    {% endif %}
+
+
+                    google.maps.event.addListener(drawingManager, 'overlaycomplete', function(event) {
+                        var map_overlay = event.overlay;
+
+                        // var info_textarea = document.getElementById('data-out-ta');
+
+                        // if (info_textarea === null) {
+                        //     return;
+                        // }
+
+                        if (event.type == 'circle') {
+                            var radius = map_overlay.getRadius();
+                            var center = map_overlay.getCenter();
+
+                            accident_data.circles.push({
+                                radius: radius,
+                                center: center
+                            });
+
+                            var model_select = document.getElementById("model-select");
+                            model_select.style.display = "block";
+
+                            var c_s = document.getElementById("circle-square");
+                            var s = radius * radius * Math.PI;
+
+                            c_s.value = s;
+
+                            last_circle = map_overlay;
+
+                        } 
+
+                        // info_textarea.value = renderData(gis_data);
+                    });
 
                 }          
             </script>
@@ -118,46 +206,61 @@
 {% block gui %}
                 <div class="card">
                     <div id="form-test">
-                        <!-- <form action=""> -->
-                            <label for="pipeline">Категорія проводу</label>
-                            <select id="pipeline" name="pipeline">
-                                <option value="gas">Газопровод</option>
-                                <option value="oil">Нафтопровод</option>
+                        <form action="" method="post">
+                            <label for="category">Категорія проводу</label>
+                            <select id="category" name="category">
+                                {% if category == None %}
+                                <option disabled selected value> -- виберіть категорію -- </option>
+                                {% else %}
+                                <option disabled selected value> -- виберіть категорію -- </option>
+                                {% endif %}
+
+                                {% for c in categories %}
+                                    {% if category == c %}
+                                <option value="{{ c }}" selected>{{ categories[c] }}</option>
+                                    {% else %}
+                                <option value="{{ c }}">{{ categories[c] }}</option>
+                                    {% endif %}
+                                
+                                {% endfor %}
                             </select>
 
-                            <label for="accident">Тип аварії</label>
-                            <select id="accident" name="accident" onchange="myFunction()">
-                                <option disabled selected value> -- виберіть аварію -- </option>
-                                <option value="a1">Аварія 1</option>
-                                <option value="a2">Аварія 2</option>
-                            </select>
-                            <!-- <input type="submit" value="Submit"> -->
-                            <!-- <button onclick="myFunction()">Try it</button> -->
-                        <!-- </form> -->
+                            <input type="submit" value="Submit">
+                        </form>
                         
                     </div>
                 </div>
 
-                <div id="a1-gui" class="card">
+                <div id="model-select" class="card">
                     <div id="form-test">
-                        <form action="">
-                            <h4>Аварія 1</h4>
-                            <label for="fname">Площа</label>
-                            <input type="text" id="fname" name="firstname" placeholder="0.0">
-
-                            <label for="lname">Кількість населення</label>
-                            <input type="text" id="lname" name="lastname" placeholder="0">
-
-                            <input type="submit" value="Submit">
-                        </form>
+                        <select id="model" name="model" onchange="myFunction()">
+                            <option disabled selected value> -- виберіть модель -- </option>
+                            <option value="model1">Модель 1</option>
+                            <option value="model2">Модель 2</option>
+                        </select>
                     </div>
                 </div>
 
-                <div id="a2-gui" class="card">
+                <div id="model1-gui" class="card">
+                    <div id="form-test">
+
+                        <h4>Модель 1</h4>
+                        <label for="circle-square">Площа (м. кв.)</label>
+                        <input type="text" id="circle-square" name="circle-square" placeholder="0.0">
+
+                        <label for="circle-square">Кількість постраждалих (одиниць)</label>
+                        <input type="text" id="count" name="count" placeholder="1.0" value="1.0">
+
+                        <button onclick="showCircleResult()">Розрахувати</button>
+
+                    </div>
+                </div>
+
+                <div id="model2-gui" class="card">
                     <div id="form-test">
                         <form action="">
                             <h4>Аварія 2</h4>
-                            <label for="fname">Площа</label>
+                            <label for="fname">Площа (м. кв.)</label>
                             <input type="text" id="fname" name="firstname" placeholder="0.0">
 
                             <label for="lname">Кількість населення</label>
@@ -171,9 +274,12 @@
 
                 <script>
                 var guis = {
-                    "a1": "a1-gui",
-                    "a2": "a2-gui",
+                    "model1": "model1-gui",
+                    "model2": "model2-gui",
                 }
+
+                var model_select = document.getElementById("model-select");
+                model_select.style.display = "none";
 
                 for (var key in guis) {
                     var a_gui = document.getElementById(guis[key]);
@@ -181,7 +287,7 @@
                 }
                 
                 function myFunction() {
-                    var a_key_selected = document.getElementById("accident").value;
+                    var a_key_selected = document.getElementById("model").value;
 
                     for (var key in guis) {
                         var a_gui = document.getElementById(guis[key]);
@@ -191,6 +297,36 @@
                             a_gui.style.display = "none";
                         }
                     }
+                }
+
+                function showCircleResult() {
+                    var s = document.getElementById("circle-square").value;
+                    var c = document.getElementById("count").value;
+
+                    var result = parseFloat(s) * parseFloat(c);
+
+
+                    var contentString = '<div id="content">'+
+                        '<div id="siteNotice">'+
+                        '</div>'+
+                        '<h1 id="firstHeading" class="firstHeading">Результат</h1>'+
+                        '<div id="bodyContent">'+
+                        result +
+                        '</div>'+
+                        '</div>';
+
+                    var infowindow = new google.maps.InfoWindow({
+                      content: contentString
+                    });
+
+                    var marker = new google.maps.Marker({
+                      position: last_circle.getCenter(),
+                      map: {{varname}}
+                    });
+
+                    // circle = accident_data.circles[accident_data.circles.length - 1]
+
+                    infowindow.open({{varname}}, marker);
                 }
                 </script>
 {% endblock %}}
