@@ -2,7 +2,7 @@
 import os
 import json
 
-from flask import render_template, Markup, flash, request, redirect, url_for
+from flask import render_template, Markup, flash, request, redirect, url_for, jsonify
 from werkzeug.utils import secure_filename
 
 from app import app
@@ -81,6 +81,20 @@ def reader():
     )
     return render_template('reader.html', **map_params)
 
+@app.route('/process', methods=['POST'])
+def process():
+
+    test = request.form.get('test')
+
+    print (" TEST={}".format(test))
+
+    if test:
+        result = "the peremoga"
+        return jsonify({'result' : result})
+
+    return jsonify({'error' : 'the zrada'})
+
+
 @app.route('/', methods=['GET', 'POST'])
 def fullmap():
     map_params = dict(
@@ -107,5 +121,7 @@ def fullmap():
 
             accidents = AccidentManager.getAccidentsDescriptions(category)
             map_params["accidents"] = accidents
+
+        # print(" PRINT POST FORM DATA = {}".format(request.form))
 
     return render_template('fullmap.html', **map_params)

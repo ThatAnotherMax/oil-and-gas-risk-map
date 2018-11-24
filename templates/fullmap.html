@@ -230,13 +230,54 @@
                         
                     </div>
                 </div>
+<!-- 
+                <script type=text/javascript>
+                    $(document).ready(function() {
+                        $('form').on('submit', function(event) {
+                            $.ajax({
+                                data : {
+                                    test : $('#testInput').val(),
+                                },
+                                type : 'POST',
+                                url : '/process'
+                            })
+                            .done(function(data) {
+                                if (data.error) {
+                                    $('#errorAlert').text(data.error).show();
+                                    $('#successAlert').hide();
+                                } else {
+                                    $('#successAlert').text(data.result).show();
+                                    $('#errorAlert').hide();
+                                }
+                            });
+
+                            event.preventDefault();
+                        });
+
+                    });
+                </script>
+
+                <div class="card">
+                    <div id="form-test">
+                        <form action="" method="post">
+                            <label for="test">the test</label>
+                            <input type="text" id="testInput" placeholder="empty">
+
+                            <input type="submit" value="go">
+                        </form>
+                    </div>
+                </div>
+
+                <div id="successAlert" class="card" style="display:none;"></div>
+                <div id="errorAlert" class="card" style="display:none;"></div> -->
 
                 <div id="model-select" class="card">
                     <div id="form-test">
+                        <label for="model">Розрахункова модель</label>
                         <select id="model" name="model" onchange="myFunction()">
                             <option disabled selected value> -- виберіть модель -- </option>
                             <option value="model1">Модель 1</option>
-                            <option value="model2">Модель 2</option>
+                            <option value="model2">Колективний ризик</option>
                         </select>
                     </div>
                 </div>
@@ -258,15 +299,37 @@
 
                 <div id="model2-gui" class="card">
                     <div id="form-test">
-                        <form action="">
-                            <h4>Аварія 2</h4>
-                            <label for="fname">Площа (м. кв.)</label>
-                            <input type="text" id="fname" name="firstname" placeholder="0.0">
+                        <form action="" method="post">
+                            <!-- <h4>Колективний ризик</h4> -->
+                            
+                            <label for="m1_h">Частота аварій, H</label>
+                            <input type="text" id="m1_h" name="h"placeholder="1.0">
 
-                            <label for="lname">Кількість населення</label>
-                            <input type="text" id="lname" name="lastname" placeholder="0">
+                            <label for="m1_phi_min">Мінімальне можливе значення уражаючого фактора, Phi_min</label>
+                            <input type="text" id="m1_phi_min" name="phi_min"placeholder="0.0">
 
-                            <input type="submit" value="Submit">
+                            <label for="m1_phi_max">Мінімальне можливе значення уражаючого фактора, Phi_max</label>
+                            <input type="text" id="m1_phi_max" name="phi_max" placeholder="1.0">
+
+                            <label for="m1_p_phi">Параметричний закон ураження людей, P(Phi)</label>
+                            <select id="m1_p_phi" name="p_phi">
+                                <option selected value="p_phi_1">Закон 1</option>
+                                <option value="p_phi_2">Закон 2</option>
+                            </select>
+
+                            <label for="m1_f_x_y_phi">Щільність розподілу інтенсивності уражаючого фактора, f(x, y, Phi)</label>
+                            <select id="m1_f_x_y_phi" name="f_x_y_phi">
+                                <option selected value="f_x_y_phi_1">Щільність розподілу 1</option>
+                                <option value="f_x_y_phi_2">Щільність розподілу 2</option>
+                            </select>
+
+                            <label for="m1_psi">Щільність населення, Psi(x, y)</label>
+                            <select id="m1_psi" name="psi">
+                                <option selected value="psi_1">Щільність населення 1</option>
+                                <option value="psi_2">Щільність населення 2</option>
+                            </select>
+
+                            <input type="submit" value="Розрахувати">
                         </form>
                     </div>
                 </div>
