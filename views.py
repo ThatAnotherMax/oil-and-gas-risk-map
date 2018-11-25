@@ -85,14 +85,30 @@ def reader():
 def process():
 
     test = request.form.get('test')
+    category = request.form.get('category')
+    model = request.form.get('model')
+    data_json = request.form.get('data')
+ 
+    print (" CATEGORY={}".format(category))
+    print (" MODEL={}".format(model))
+    print (" DATA={}".format(data_json))
 
-    print (" TEST={}".format(test))
+    result = {}
 
-    if test:
-        result = "the peremoga"
-        return jsonify({'result' : result})
+    if category:
+        map_data = DataManager.getCategoryData(category)
+        result['category'] = {
+            "name" : category,
+            "data" : map_data
+        }
+    elif model and data_json:
+        data = json.loads(data_json)
+        result['result'] = 'Model {} data {}'.format(model, data.get('h'))
+        # result['result'] = 'Model {}'.format(model)
+    else:
+        result['error'] = 'Missing data!'
 
-    return jsonify({'error' : 'the zrada'})
+    return jsonify(result)
 
 
 @app.route('/', methods=['GET', 'POST'])

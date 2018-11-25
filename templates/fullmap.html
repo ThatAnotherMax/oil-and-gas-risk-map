@@ -8,7 +8,7 @@
                 height:650px;
             }
 
-            #form-test input[type=text], select {
+            .data-form input[type=text], select {
                 width: 100%;
                 padding: 12px 20px;
                 margin: 8px 0;
@@ -18,7 +18,7 @@
                 box-sizing: border-box;
             }
 
-            #form-test input[type=submit] {
+            .data-form input[type=submit] {
                 width: 100%;
                 background-color: #4CAF50;
                 /*background-color: #333;*/
@@ -30,19 +30,19 @@
                 cursor: pointer;
             }
 
-            #form-test input[type=submit]:hover {
+            .data-form input[type=submit]:hover {
                 background-color: #45a049;
                 /*background-color: #ddd;*/
                 /*color: black;*/
             }
 
-            #form-test div {
+            .data-form div {
                 border-radius: 5px;
                 background-color: #f2f2f2;
                 padding: 20px;
             }
 
-            #form-test button {
+            .data-form button {
                 width: 100%;
                 background-color: #4CAF50;
                 /*background-color: #333;*/
@@ -54,10 +54,28 @@
                 cursor: pointer;
             }
 
-            #form-test button:hover {
+            .data-form button:hover {
                 background-color: #45a049;
                 /*background-color: #ddd;*/
                 /*color: black;*/
+            }
+
+            #errorAlert {
+                color: #D8000C;
+                /*background-color: #FFD2D2;*/
+                border-left: 9px solid #D8000C;
+            }
+
+            #successAlert {
+                color: #4F8A10;
+                /*background-color: #DFF2BF;*/
+                border-left: 9px solid #4F8A10;
+            }
+
+            #infoAlert {
+                color: #00529B;
+                /*background-color: #BDE5F8;*/
+                border-left: 9px solid #00529B;
             }
         </style>
 {% endblock %}
@@ -74,6 +92,28 @@
 
             <script type="text/javascript">
                 var fullmap = null;
+
+                var polylines = [];
+
+                var modelOnSubmit = {
+                    "model2": function() {
+                        var data = {
+                            h: $("#m1_h").val()
+                        };
+                        return data;
+                    }
+                }
+
+                var models = {
+                    "model1": "form-model1",
+                    "model2": "form-model2",
+                }
+
+                var guis = {
+                    "model1": "model1-gui",
+                    "model2": "model2-gui",
+                }
+
 
                 var gis_data = {
                     polylines: [],
@@ -149,15 +189,18 @@
                     for (var i = 0; i < gis_data.polylines.length; i++) {
                         var polylineOptions = getDefault(gis_data.polylines[i], 'polylineOptions', {});
 
-                        {{varname}}_polyline = new google.maps.Polyline({
+                        new_polyline = new google.maps.Polyline({
                             strokeColor: getDefault(polylineOptions, "strokeColor", "#FF0000"),
                             strokeOpacity: getDefault(polylineOptions, "strokeOpacity", 1.0),
                             strokeWeight: getDefault(polylineOptions, "strokeWeight", 2),
 
                             path: gis_data.polylines[i].path,
-                            map: {{varname}},
                             geodesic: true
                         });
+
+                        new_polyline.setMap({{varname}});
+
+                        polylines.push(new_polyline);
 
                     }
 
@@ -204,9 +247,122 @@
              async defer></script>
 {% endblock %}
 {% block gui %}
+                <script type=text/javascript>
+
+
+                    $(document).ready(function() {
+                        // service
+                        function showMessageAlert(msgType, msg, hideAll=true) {
+                            if (hideAll === true) {
+                               $('#errorAlert').hide();
+                                $('#successAlert').hide();
+                                $('#infoAlert').hide(); 
+                            }
+                            
+                            switch(msgType) {
+                                case 'error':
+                                    $('#errorAlert').text(msg).show();
+                                    break;
+                                case 'info':
+                                    $('#infoAlert').text(msg).show();
+                                    break;
+                                case 'success':
+                                    $('#successAlert').text(msg).show();
+                                    break;
+                            }
+                        }
+
+                        for (var model_name in models) {
+                            var model_form_id = models[model_name];
+
+                            $("#"+model_form_id).on('submit', function(event) {
+                                var modelName = $('select#model option:checked').val();
+                                var modelData = JSON.stringify(modelOnSubmit[modelName]());
+                                showMessageAlert('info', modelData);
+                                $.ajax({
+                                    data : {
+                                        model : modelName,
+                                        data : modelData
+                                    },
+                                    type : 'POST',
+                                    url : '/process'
+                                })
+                                .done(function(data) {
+                                    if (data.error) {
+                                        showMessageAlert('error', data.error);
+                                    } else if (data.result) {
+                                        showMessageAlert('success', data.result, false);
+                                    }
+
+                                });
+
+                                event.preventDefault();
+                            });
+                        }
+
+                        $('#form-category').on('submit', function(event) {
+                            // map 
+                            function resetData(gis_data) {
+                                // showMessageAlert('info', gis_data, false);
+
+                                for (var i = 0; i < polylines.length; i++) {
+                                    var polyline = polylines[i];
+                                    polyline.setMap(null);
+                                    delete polylines[i];
+                                }
+
+                                polylines = [];
+
+                                for (var i = 0; i < gis_data.polylines.length; i++) {
+                                    var polylineOptions = getDefault(gis_data.polylines[i], 'polylineOptions', {});
+
+                                    new_polyline = new google.maps.Polyline({
+                                        strokeColor: getDefault(polylineOptions, "strokeColor", "#FF0000"),
+                                        strokeOpacity: getDefault(polylineOptions, "strokeOpacity", 1.0),
+                                        strokeWeight: getDefault(polylineOptions, "strokeWeight", 2),
+
+                                        path: gis_data.polylines[i].path,
+                                        geodesic: true
+                                    });
+
+                                    new_polyline.setMap({{varname}});
+
+                                    polylines.push(new_polyline);
+                                }
+
+                            }
+
+                            // submit logic
+                            $.ajax({
+                                data : {
+                                    category : $('#category').val(),
+                                },
+                                type : 'POST',
+                                url : '/process'
+                            })
+                            .done(function(data) {
+                                if (data.error) {
+                                    showMessageAlert('error', data.error);
+                                } else if (data.category) {
+                                    showMessageAlert('success', "Category '"+data.category.name+"' loaded");
+                                    resetData(data.category.data);
+
+                                    $('#model-select').css({ display: "block" });
+                                }
+
+                            });
+
+                            event.preventDefault();
+                        });
+
+
+
+                    });
+                </script>
+
                 <div class="card">
-                    <div id="form-test">
-                        <form action="" method="post">
+                    <div class="data-form">
+                        <form id="form-category" action="" method="post">
                             <label for="category">Категорія проводу</label>
                             <select id="category" name="category">
                                 {% if category == None %}
@@ -230,49 +386,14 @@
                         
                     </div>
                 </div>
-<!-- 
-                <script type=text/javascript>
-                    $(document).ready(function() {
-                        $('form').on('submit', function(event) {
-                            $.ajax({
-                                data : {
-                                    test : $('#testInput').val(),
-                                },
-                                type : 'POST',
-                                url : '/process'
-                            })
-                            .done(function(data) {
-                                if (data.error) {
-                                    $('#errorAlert').text(data.error).show();
-                                    $('#successAlert').hide();
-                                } else {
-                                    $('#successAlert').text(data.result).show();
-                                    $('#errorAlert').hide();
-                                }
-                            });
-
-                            event.preventDefault();
-                        });
-
-                    });
-                </script>
-
-                <div class="card">
-                    <div id="form-test">
-                        <form action="" method="post">
-                            <label for="test">the test</label>
-                            <input type="text" id="testInput" placeholder="empty">
-
-                            <input type="submit" value="go">
-                        </form>
-                    </div>
-                </div>
 
                 <div id="successAlert" class="card" style="display:none;"></div>
-                <div id="errorAlert" class="card" style="display:none;"></div> -->
+                <div id="errorAlert" class="card" style="display:none;"></div>
+                <div id="infoAlert" class="card" style="display:none;"></div>
 
-                <div id="model-select" class="card">
-                    <div id="form-test">
+                <div id="model-select" class="card" style="display:none;">
+
+                    <div class="data-form">
                         <label for="model">Розрахункова модель</label>
                         <select id="model" name="model" onchange="myFunction()">
                             <option disabled selected value> -- виберіть модель -- </option>
@@ -280,28 +401,28 @@
                             <option value="model2">Колективний ризик</option>
                         </select>
                     </div>
+
                 </div>
 
-                <div id="model1-gui" class="card">
-                    <div id="form-test">
+                <div id="model1-gui" class="card" style="display:none;">
+                    <div class="data-form">
+                        <form id="form-model1" action="" method="post">
+                            <h4>Модель 1</h4>
+                            <label for="circle-square">Площа (м. кв.)</label>
+                            <input type="text" id="circle-square" name="circle-square" placeholder="0.0">
 
-                        <h4>Модель 1</h4>
-                        <label for="circle-square">Площа (м. кв.)</label>
-                        <input type="text" id="circle-square" name="circle-square" placeholder="0.0">
+                            <label for="circle-square">Кількість постраждалих (одиниць)</label>
+                            <input type="text" id="count" name="count" placeholder="1.0" value="1.0">
 
-                        <label for="circle-square">Кількість постраждалих (одиниць)</label>
-                        <input type="text" id="count" name="count" placeholder="1.0" value="1.0">
-
-                        <button onclick="showCircleResult()">Розрахувати</button>
-
+                            <!-- <button onclick="showCircleResult()">Розрахувати</button> -->
+                            <input type="submit" value="Розрахувати">
+                        </form>
                     </div>
                 </div>
 
-                <div id="model2-gui" class="card">
-                    <div id="form-test">
-                        <form action="" method="post">
-                            <!-- <h4>Колективний ризик</h4> -->
-                            
+                <div id="model2-gui" class="card" style="display:none;">
+                    <div class="data-form">
+                        <form id="form-model2" action="" method="post">
                             <label for="m1_h">Частота аварій, H</label>
                             <input type="text" id="m1_h" name="h"placeholder="1.0">
 
@@ -336,18 +457,14 @@
 
 
                 <script>
-                var guis = {
-                    "model1": "model1-gui",
-                    "model2": "model2-gui",
-                }
+                
+                // var model_select = document.getElementById("model-select");
+                // model_select.style.display = "none";
 
-                var model_select = document.getElementById("model-select");
-                model_select.style.display = "none";
-
-                for (var key in guis) {
-                    var a_gui = document.getElementById(guis[key]);
-                    a_gui.style.display = "none";
-                }
+                // for (var key in guis) {
+                //     var a_gui = document.getElementById(guis[key]);
+                //     a_gui.style.display = "none";
+                // }
                 
                 function myFunction() {
                     var a_key_selected = document.getElementById("model").value;
