@@ -7,5 +7,6 @@ GIS system for prognosing oil and gas danger risks
 # Tools
 - Python
 - Flask
+- jQuery
 - json
 - Google Maps API
