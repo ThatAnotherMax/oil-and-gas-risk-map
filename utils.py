@@ -62,43 +62,55 @@ class DataManager(object):
 
         return DataManager.read_data(category_data_fpath.get(category))
 
+class Model(object):
+    def params(self, params):
+        self._onParams(params)
 
-class AccidentManager(object):
-    s_accidents = {
-        "gas": [
-            {
-                "ID": "a1",
-                "Name": "Аварія 1",
-                "Model": Accident1
-            },
-            {
-                "ID": "a2",
-                "Name": "Аварія 2",
-                "Model": Accident2
-            },
-        ]
-    }
+    def _onParams(self, params):
+        pass
+
+    def process(self):
+        return self._onProcess()
+
+class ModelCollectiveRisk(Model):
+    def __init__(self):
+        self.square = 0
+        self.h = 0
+        self.phi_min = 0
+        self.phi_max = 0
+        self.f_x_y_phi = None
+        self.psi = None
+
+    def _onParams(self, params):
+        self.square = float(params.get("square"))
+        self.h = int(params.get("h"))
+        self.phi_min = int(params.get("phi_min"))
+        self.phi_max = int(params.get("phi_max"))
+        self.f_x_y_phi = params.get("f_x_y_phi")
+        self.psi = params.get("psi")
+
+    def _onProcess(self):
+
+        return self.h * self.phi_min * self.square
+
+
+class ModelManager(object):
+    s_models = {}
 
     @staticmethod
-    def getAccidents(category):
-        if category not in AccidentManager.s_accidents:
-            return None
-
-        return AccidentManager.s_accidents[category]
+    def addModel(model_name, model_type):
+        if model_name and model_type:
+            model = model_type()
+            ModelManager.s_models[model_name] = model
 
     @staticmethod
-    def getAccidentsDescriptions(category):
-        accidents = AccidentManager.getAccidents(category)
-        descriptions = []
+    def hasModel(model_name):
+        return model_name in ModelManager.s_models
 
-        for accident in accidents:
-            description = {
-                "ID": accident.get("ID"),
-                "Name": accident.get("Name")
-            }
+    @staticmethod
+    def getModel(model_name):
+        if ModelManager.hasModel(model_name):
+            return ModelManager.s_models[model_name]
 
-            descriptions.append(description)
-
-        return descriptions
-
-
+# dummy model register
+ModelManager.addModel("collective-risk", ModelCollectiveRisk)

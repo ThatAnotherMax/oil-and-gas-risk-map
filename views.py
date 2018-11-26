@@ -5,7 +5,7 @@ from flask import render_template, Markup, flash, request, redirect, url_for, js
 from werkzeug.utils import secure_filename
 
 from app import app
-from utils import DataManager, AccidentManager
+from utils import DataManager, ModelManager
 
 
 # = EDITOR & READER ================================================================================
@@ -86,11 +86,11 @@ def process():
 
     test = request.form.get('test')
     category = request.form.get('category')
-    model = request.form.get('model')
+    model_name = request.form.get('model')
     data_json = request.form.get('data')
  
     print (" CATEGORY={}".format(category))
-    print (" MODEL={}".format(model))
+    print (" MODEL NAME={}".format(model_name))
     print (" DATA={}".format(data_json))
 
     result = {}
@@ -101,10 +101,17 @@ def process():
             "name" : category,
             "data" : map_data
         }
-    elif model and data_json:
-        data = json.loads(data_json)
-        result['result'] = 'Model {} data {}'.format(model, data.get('h'))
-        # result['result'] = 'Model {}'.format(model)
+    elif model_name and data_json:
+        if ModelManager.hasModel(model_name) is False:
+            result['error'] = "Missing model '{}'".format(model_name)
+        else:
+            model = ModelManager.getModel(model_name)
+
+            data = json.loads(data_json)
+            model.params(data)
+            process_result = model.process()
+
+            result['result'] = process_result
     else:
         result['error'] = 'Missing data!'
 

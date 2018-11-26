@@ -212,8 +212,12 @@ body {
 
 .data-form button {
     width: 100%;
-    background-color: #4CAF50;
-    color: white;
+    /*background-color: #4CAF50;*/
+    /*color: white;*/
+
+    color: #9F6000;
+    background-color: #FEEFB3;
+
     padding: 14px 20px;
     margin: 8px 0;
     border: none;
@@ -222,5 +226,6 @@ body {
 }
 
 .data-form button:hover {
-    background-color: #45a049;
+    /*background-color: #45a049;*/
+    background-color: #fdda4e;
 }
