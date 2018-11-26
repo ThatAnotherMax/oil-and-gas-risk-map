@@ -1,4 +1,3 @@
-
 import os
 import json
 
@@ -8,13 +7,13 @@ from werkzeug.utils import secure_filename
 from app import app
 from utils import DataManager, AccidentManager
 
+
+# = EDITOR & READER ================================================================================
 ALLOWED_EXTENSIONS = set(['txt', 'json'])
 
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-
 
 @app.route('/save', methods=['GET', 'POST'])
 def save():
@@ -81,6 +80,7 @@ def reader():
     )
     return render_template('reader.html', **map_params)
 
+# = MAIN ========================================================================================
 @app.route('/process', methods=['POST'])
 def process():
 
@@ -111,33 +111,20 @@ def process():
     return jsonify(result)
 
 
-@app.route('/', methods=['GET', 'POST'])
-def fullmap():
-    map_params = dict(
-        identifier="fullmap",
-        varname="fullmap",
+@app.route('/')
+def index():
+    params = dict(
+        identifier="mainmap",
+        varname="mainmap",
         lat=48.383022,
         lng=31.1828699,
         zoom=6,
         minZoom=6,
+
         data=None,
         categories=DataManager.getCategories(),
         category=None,
         accidents=None
     )
 
-    category = None
-    if request.method == 'POST':
-        category = request.form.get("category")
-        if category is not None:
-            data = DataManager.getCategoryData(category)
-
-            map_params['data'] = data
-            map_params['category'] = category
-
-            accidents = AccidentManager.getAccidentsDescriptions(category)
-            map_params["accidents"] = accidents
-
-        # print(" PRINT POST FORM DATA = {}".format(request.form))
-
-    return render_template('fullmap.html', **map_params)
+    return render_template('main.html', **params)
