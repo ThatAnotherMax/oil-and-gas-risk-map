@@ -4,6 +4,9 @@ import json
 from app import app
 from models import Accident1, Accident2
 
+from scipy.integrate import quad
+from math import pi, exp
+
 
 class DataManager(object):
     s_categories  = {
@@ -72,26 +75,47 @@ class Model(object):
     def process(self):
         return self._onProcess()
 
+class ModelIndividualRisk(Model):
+    def __init__(self):
+        self.square = 0
+        self.h = 0
+        self.phi_min = 0
+        self.phi_max = 0
+        self.n = 0
+
+    def _onParams(self, params):
+        self.square = float(params.get("square"))
+        self.h = float(params.get("h"))
+        self.phi_min = int(params.get("phi_min"))
+        self.phi_max = int(params.get("phi_max"))
+        self.n = int(params.get("n"))
+
+    def _onProcess(self):
+        mean = 0
+        sd   = 1        
+        integr = quad(lambda x: 1 / ( sd * ( 2 * pi ) ** 0.5 ) * exp( x ** 2 / (-2 * sd ** 2) ), self.phi_min, self.phi_max )
+        m_n = (sum(integr)) * self.square
+        return round(self.h * (m_n / (self.n * self.square)), 5)
+
 class ModelCollectiveRisk(Model):
     def __init__(self):
         self.square = 0
         self.h = 0
         self.phi_min = 0
         self.phi_max = 0
-        self.f_x_y_phi = None
-        self.psi = None
 
     def _onParams(self, params):
         self.square = float(params.get("square"))
-        self.h = int(params.get("h"))
+        self.h = float(params.get("h"))
         self.phi_min = int(params.get("phi_min"))
         self.phi_max = int(params.get("phi_max"))
-        self.f_x_y_phi = params.get("f_x_y_phi")
-        self.psi = params.get("psi")
 
     def _onProcess(self):
-
-        return self.h * self.phi_min * self.square
+        mean = 0
+        sd   = 1        
+        integr = quad(lambda x: 1 / ( sd * ( 2 * pi ) ** 0.5 ) * exp( x ** 2 / (-2 * sd ** 2) ), self.phi_min, self.phi_max )
+        m_n = (sum(integr)) * self.square
+        return round(self.h * m_n, 2)
 
 
 class ModelManager(object):
@@ -113,4 +137,5 @@ class ModelManager(object):
             return ModelManager.s_models[model_name]
 
 # dummy model register
+ModelManager.addModel("individual-risk", ModelIndividualRisk)
 ModelManager.addModel("collective-risk", ModelCollectiveRisk)

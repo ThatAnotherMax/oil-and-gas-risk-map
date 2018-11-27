@@ -86,12 +86,11 @@ def process():
 
     test = request.form.get('test')
     category = request.form.get('category')
-    model_name = request.form.get('model')
-    data_json = request.form.get('data')
+
+    models_json = request.form.get('models')
  
     print (" CATEGORY={}".format(category))
-    print (" MODEL NAME={}".format(model_name))
-    print (" DATA={}".format(data_json))
+    print (" MODELS={}".format(models_json))
 
     result = {}
 
@@ -101,17 +100,33 @@ def process():
             "name" : category,
             "data" : map_data
         }
-    elif model_name and data_json:
-        if ModelManager.hasModel(model_name) is False:
-            result['error'] = "Missing model '{}'".format(model_name)
-        else:
-            model = ModelManager.getModel(model_name)
+    elif models_json:
+        models_result = []
 
-            data = json.loads(data_json)
-            model.params(data)
-            process_result = model.process()
+        models = json.loads(models_json)
 
-            result['result'] = process_result
+        for model in models:
+            model_name = model.get("model")
+            model_data = model.get("data")
+
+
+            if ModelManager.hasModel(model_name) is False:
+                result['error'] = "Missing model '{}'".format(model_name)
+                break
+            else:
+                model = ModelManager.getModel(model_name)
+
+                model.params(model_data)
+                process_result = model.process()
+
+                models_result.append({
+                    "model": model_name,
+                    "result": process_result
+                    })
+
+        if result.get('error') is None:
+            result['result'] = models_result
+            print (" MODELS={}".format(models_result))
     else:
         result['error'] = 'Missing data!'
 

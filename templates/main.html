@@ -22,6 +22,18 @@
 
             <script type="text/javascript">
                 // service
+                function gf_round(value, ndec){
+                    var n = 10;
+                    for(var i = 1; i < ndec; i++){
+                        n *=10;
+                    }
+
+                    if(!ndec || ndec <= 0)
+                        return Math.round(value);
+                    else
+                        return Math.round(value * n) / n;
+                }
+
                 function gf_getDefault(dict, key, default_value=null) {
                     if (dict.hasOwnProperty(key) === false) {
                         return default_value;
@@ -40,6 +52,8 @@
 
                 // map
                 var {{varname}} = null;
+
+                var gv_lastOverlay = null;
 
                 var gv_mapObjects = {
                     polylines: [],
@@ -122,24 +136,37 @@
                     google.maps.event.addListener(gv_drawingManager, 'overlaycomplete', function(event) {
                         gf_showMessageAlert('info', event.type);  // debug
 
-                        selectedModelName = gf_getSelectedModelName();
-                        selectedModel = gv_models[selectedModelName];
-
-                        selectedModel.mapObject = {
-                            'overlay': event.overlay,
-                            'type': event.type
+                        gv_lastOverlay = {
+                            "overlay": event.overlay,
+                            "type": event.type
                         }
+
+                        // var selectedModelNames = gf_getSelectedModelNames();
+
+                        // for (var i = 0; i < selectedModelNames.length; i++) {
+                        //     var selectedModelName = selectedModelNames[i];
+                        //     var selectedModel = gf_getModel(selectedModelName);
+
+                        //     selectedModel.mapObject = {
+                        //         'overlay': event.overlay,
+                        //         'type': event.type
+                        //     }
+
+                        //     gf_showMessageAlert('info', event.type +" "+JSON.stringify(selectedModel));  // debug
+                        // }
 
                         gv_drawingManager.setMap(null);
 
                         if (event.type == 'circle') {
                             var radius = event.overlay.getRadius();
-                            var s = radius * radius * Math.PI;
-                            $("#"+selectedModel.valueHolderID).val(s);
+                            var s = radius * radius * Math.PI; 
+                            $("#model-square").val(gf_round(s, 5));
                         } else if (event.type == 'polygon') {
                             var s = google.maps.geometry.spherical.computeArea(event.overlay.getPath());
-                            $("#"+selectedModel.valueHolderID).val(s);
+                            $("#model-square").val(gf_round(s, 5));
                         }
+
+                        $('#model-select').css({ display: "block" });
 
                     });
 
@@ -180,6 +207,26 @@
                         return selectedModelName;
                     }
 
+                    function gf_getSelectedModelNames() {
+                        var checkboxes = document.getElementsByName("model"); 
+
+                        var selectedModels = [];
+                        for(var i = 0; i < checkboxes.length; i++)  
+                        {  
+                            var checkbox = checkboxes[i]
+
+                            if (checkbox.checked) {
+                                selectedModels.push(checkbox.value)
+                            }
+                        }
+
+                        return selectedModels;
+                    }
+
+                    function gf_getModel(modelName) {
+                        return gv_models[modelName];
+                    }
+
                     // submit handlers
                     $(document).ready(function() {
                         // categories
@@ -203,7 +250,11 @@
                                     gf_resetMapObjects(gv_mapObjects);
                                     gf_setMapObjectsFromData(gv_mapObjects, data.category.data);
 
-                                    $('#model-select').css({ display: "block" });
+                                    // $('#model-select').css({ display: "block" });
+
+                                    $('#model-area').css({ display: "block" });
+
+
                                 }
 
                             });
@@ -212,70 +263,92 @@
                         });
 
                         // models
-                        function modelFormOnSubmitEventHandler(event) {
-                                // var selectedModelName = $('select#model option:checked').val();
-                                var selectedModelName = gf_getSelectedModelName();
+                        
+
+                        $("#form-calc").on('submit', function (event) {
+                            var selectedModelNames = gf_getSelectedModelNames();
+                            var modelsData = [];
+
+                            var isValidData = true;
+
+                            for (var i = 0; i < selectedModelNames.length; i++) {
+                                var selectedModelName = selectedModelNames[i];
                                 var selectedModel = gv_models[selectedModelName];
 
                                 if (selectedModel.validateData() === false) {
-                                    gf_showMessageAlert('error', "Invalid data!");
+                                    isValidData = false;
+                                    break;
                                 } else {
-                                    var selectedModelData = selectedModel.getData();
-                                    var modelDataJSON = JSON.stringify(selectedModelData);
-
-                                    gf_showMessageAlert('info', JSON.stringify(selectedModelData, undefined, 1));  // debug
-                                    
-                                    $.ajax({
-                                        data : {
-                                            model : selectedModelName,
-                                            data : modelDataJSON
-                                        },
-                                        type : 'POST',
-                                        url : '/process'
-                                    })
-                                    .done(function(data) {
-                                        if (data.error) {
-                                            gf_showMessageAlert('error', data.error);
-                                        } else if (data.result) {
-                                            gf_showMessageAlert('success', data.result, false);
-
-                                            if (selectedModel.mapObject !== null) {
-                                                if (selectedModel.mapObject.type === "circle") {
-                                                    // var radius = map_overlay.getRadius();
-                                                    var center = selectedModel.mapObject.overlay.getCenter();
-                                                    gf_showInfoBoxAtPosition(
-                                                        center,
-                                                        selectedModel.name,
-                                                        data.result
-                                                    );
-                                                } else if (selectedModel.mapObject.type === "polygon") {
-                                                    var bounds = new google.maps.LatLngBounds();
-
-                                                    selectedModel.mapObject.overlay.getPath().forEach(function(element,index){bounds.extend(element)})
-
-                                                    var center = bounds.getCenter();
-
-                                                    gf_showInfoBoxAtPosition(
-                                                        center,
-                                                        selectedModel.name,
-                                                        data.result
-                                                    );
-                                                }
-                                                
-                                            }
-                                            
-                                        }
-
+                                    modelsData.push({
+                                        model: selectedModelName,
+                                        data: selectedModel.getData()
                                     });
                                 }
-
-                                event.preventDefault();
                             }
 
-                        for (var modelName in gv_models) {
-                            var model = gv_models[modelName];
-                            $("#"+model.formID).on('submit', modelFormOnSubmitEventHandler);
-                        }
+                            if (isValidData === false) {
+                                gf_showMessageAlert('error', "Invalid data!");
+                            } else {
+                                $.ajax({
+                                    data : {
+                                        models: JSON.stringify(modelsData),
+                                    },
+                                    type : 'POST',
+                                    url : '/process'
+                                })
+                                .done(function(data) {
+                                    if (data.error) {
+                                        gf_showMessageAlert('error', data.error);
+                                    } else if (data.result) {
+                                        gf_showMessageAlert('success', JSON.stringify(data.result), false);
+
+                                        var infoMessage = "";
+                                        var center = null;
+
+                                        for (var i = 0; i < data.result.length; i++) {
+                                            var modelData = data.result[i];
+
+                                            var modelName = modelData["model"];
+                                            var modelResult = modelData["result"];
+
+                                            var resultModel = gf_getModel(modelName);
+
+                                            infoMessage += resultModel.name+": "+resultModel.resultName+" = "+modelResult+"<br>";
+
+                                            if (gv_lastOverlay !== null){
+                                                resultModel.mapObject = gv_lastOverlay;
+
+                                                if (gv_lastOverlay.type === "circle") {
+                                                    // var radius = map_overlay.getRadius();
+                                                    var center = gv_lastOverlay.overlay.getCenter();
+                                                    
+                                                } else if (gv_lastOverlay.type === "polygon") {
+                                                    var bounds = new google.maps.LatLngBounds();
+
+                                                    gv_lastOverlay.overlay.getPath().forEach(function(element,index){bounds.extend(element)})
+
+                                                    var center = bounds.getCenter();
+                                                }
+
+                                            }
+
+                                        }
+
+                                        if (center !== null) {
+                                            gf_showInfoBoxAtPosition(
+                                                center,
+                                                "Результат",
+                                                infoMessage
+                                            );
+                                        }
+
+                                    }
+
+                                });
+                            }
+
+                            event.preventDefault();
+                        });
                     });
 
                     function gf_switchModelGUI() {
@@ -296,7 +369,7 @@
                         var contentString = '<div id="content">'+
                             '<div id="siteNotice">'+
                             '</div>'+
-                            '<h1 id="firstHeading" class="firstHeading">'+title+'</h1>'+
+                            '<h1 id="thirdHeading" class="thirdHeading">'+title+'</h1>'+
                             '<div id="bodyContent">'+
                             message +
                             '</div>'+
@@ -337,7 +410,7 @@
                                 {% endfor %}
                             </select>
 
-                            <input type="submit" value="Submit">
+                            <input type="submit" value="Завантажити">
                         </form>
                         
                     </div>
@@ -347,74 +420,101 @@
                 <div id="errorAlert" class="card error" style="display:none;"></div>
                 <div id="infoAlert" class="card info" style="display:none;"></div>
 
-                <div id="model-select" class="card" style="display:none;">
+                <div id="model-area" class="card" style="display:none;">
                     <div class="data-form">
-                        <label for="model">Розрахункова модель</label>
-                        <select id="model" name="model" onchange="gf_switchModelGUI()">
-                            <option disabled selected value> -- виберіть модель -- </option>
-                            <option value="collective-risk">Колективний ризик</option>
-                            <!-- <option value="model2">Модель 1</option> -->
-                        </select>
+                        <h4>Область</h4>
+
+                        <label for="model-square">Площа області, S (м2)</label>
+                        <input type="text" id="model-square" name="S"placeholder="0.0">
+
+                        <button type="button" name="square" placeholder="0.0" onclick="gf_startDrawing()">Створити область на мапі</button>
+
                     </div>
                 </div>
-                
-                <!-- models -->                
-                <div id="model1-gui" class="card" style="display:none;">
+
+                <!-- models --> 
+                <div id="model-select" class="card" style="display:none;">
                     <div class="data-form">
-                        <h4>Колективний ризик</h4>
-                        <form id="form-model1" action="" method="post">
-                            <label for="m1_square">Площа області, м2</label>
-                            <input type="text" id="m1_square" name="h"placeholder="0.0">
+                        <h4>Розрахувати</h4>
 
-                            <button type="button" name="square" placeholder="0.0" onclick="gf_startDrawing()">Створити область на мапі</button>
+                        <input type="checkbox" name="model" value="individual-risk" onchange="gf_validataModelSelection()">
+                        <label for="individual-risk">Індивідуальний ризик</label><br>
 
-                            <label for="m1_h">Частота аварій, H</label>
-                            <input type="text" id="m1_h" name="h"placeholder="1.0">
+                        <input type="checkbox" name="model" value="collective-risk" onchange="gf_validataModelSelection()">
+                        <label for="collective-risk">Колективний ризик</label><br>
 
-                            <label for="m1_phi_min">Мінімальне можливе значення уражаючого фактора, Phi_min</label>
-                            <input type="text" id="m1_phi_min" name="phi_min"placeholder="0.0">
+                        <input type="checkbox" name="model" value="agriculture-costs" disabled onchange="gf_validataModelSelection()">
+                        <label for="agriculture-costs">Збитки від вилучення або порушення сільськогосподарських угідь та втрат тваринництва</label><br>
+                        
+                    </div>
+                </div>
 
-                            <label for="m1_phi_max">Мінімальне можливе значення уражаючого фактора, Phi_max</label>
-                            <input type="text" id="m1_phi_max" name="phi_max" placeholder="1.0">
+                <script type="text/javascript">
+                    function gf_validataModelSelection()
+                    {  
+                        var checkboxes = document.getElementsByName("model");  
+                        var selectedModels = [];
 
-                            <label for="m1_p_phi">Параметричний закон ураження людей, P(Phi)</label>
-                            <select id="m1_p_phi" name="p_phi">
-                                <option selected value="p_phi_1">Закон 1</option>
-                                <option value="p_phi_2">Закон 2</option>
-                            </select>
+                        for(var i = 0; i < checkboxes.length; i++)  
+                        {  
+                            var checkbox = checkboxes[i];
+                            if (checkbox.checked) {
+                                selectedModels.push(checkbox.value)
+                                $("#"+gv_models[checkbox.value].guiID).css({ display: "block" });
+                            } else {
+                                $("#"+gv_models[checkbox.value].guiID).css({ display: "none" });
+                            }
+                        }
 
-                            <label for="m1_f_x_y_phi">Щільність розподілу інтенсивності уражаючого фактора, f(x, y, Phi)</label>
-                            <select id="m1_f_x_y_phi" name="f_x_y_phi">
-                                <option selected value="f_x_y_phi_1">Щільність розподілу 1</option>
-                                <option value="f_x_y_phi_2">Щільність розподілу 2</option>
-                            </select>
+                        if (selectedModels.length !== 0) {
+                            $("#model-calc").css({ display: "block" });
+                        } else {
+                            $("#model-calc").css({ display: "none" });
+                        }
+                        
 
-                            <label for="m1_psi">Щільність населення, Psi(x, y)</label>
-                            <select id="m1_psi" name="psi">
-                                <option selected value="psi_1">Щільність населення 1</option>
-                                <option value="psi_2">Щільність населення 2</option>
-                            </select>
+                    } 
+                </script>
 
+                <div id="model-calc" class="card" style="display:none;">
+                    <div class="data-form">
+                        <form id="form-calc" action="" method="post">
                             <input type="submit" value="Розрахувати">
                         </form>
                     </div>
                 </div>
 
+                <div id="model1-gui" class="card" style="display:none;">
+                    <div class="data-form">
+                        <h4>Індивідувальний ризик</h4>
+                        
+                        <label for="m1_h">Частота аварій, H</label>
+                        <input type="text" id="m1_h" name="h"placeholder="0.5">
+
+                        <label for="m1_phi_min">Мінімальне можливе значення уражаючого фактора, Phi_min</label>
+                        <input type="text" id="m1_phi_min" name="phi_min"placeholder="0.0">
+
+                        <label for="m1_phi_max">Мінімальне можливе значення уражаючого фактора, Phi_max</label>
+                        <input type="text" id="m1_phi_max" name="phi_max" placeholder="1.0">
+
+                        <label for="m1_n">Загальна чисельність населення, N</label>
+                        <input type="text" id="m1_n" name="n" placeholder="1.0">
+                    </div>
+                </div>
+
                 <script type="text/javascript">
-                    gv_models["collective-risk"] = {
-                        "name": "Колективний ризик",
-                        "valueHolderID": "m1_square",
+                    gv_models["individual-risk"] = {
+                        "name": "Індивідувальний ризик",
+                        "resultName": "Rві",
                         "mapObject": null,
-                        "formID": "form-model1",
                         "guiID": "model1-gui",
                         "validateData": function() {
                             var data = [
-                                $("#m1_square").val(),
+                                $("#model-square").val(),
                                 $("#m1_h").val(),
                                 $("#m1_phi_min").val(),
                                 $("#m1_phi_max").val(),
-                                $("#m1_f_x_y_phi option:checked").val(),
-                                $("#m1_psi  option:checked").val(),
+                                $("#m1_n").val(),
                             ];
 
                             for (var i = 0; i < data.length; i++) {
@@ -428,12 +528,63 @@
                         },
                         "getData": function() {
                             var data = {
-                                square: $("#m1_square").val(),
+                                square: $("#model-square").val(),
                                 h: $("#m1_h").val(),
                                 phi_min: $("#m1_phi_min").val(),
                                 phi_max: $("#m1_phi_max").val(),
-                                f_x_y_phi: $("#m1_f_x_y_phi option:checked").val(),
-                                psi: $("#m1_psi  option:checked").val(),
+                                n: $("#m1_n").val(),
+                            };
+
+                            return data;
+                        }
+                    }
+                </script>
+                
+                               
+                <div id="model2-gui" class="card" style="display:none;">
+                    <div class="data-form">
+                        <h4>Колективний ризик</h4>
+
+                        <label for="m2_h">Частота аварій, H</label>
+                        <input type="text" id="m2_h" name="h"placeholder="0.5">
+
+                        <label for="m2_phi_min">Мінімальне можливе значення уражаючого фактора, Phi_min</label>
+                        <input type="text" id="m2_phi_min" name="phi_min"placeholder="0.0">
+
+                        <label for="m2_phi_max">Мінімальне можливе значення уражаючого фактора, Phi_max</label>
+                        <input type="text" id="m2_phi_max" name="phi_max" placeholder="1.0">
+                    </div>
+                </div>
+
+                <script type="text/javascript">
+                    gv_models["collective-risk"] = {
+                        "name": "Колективний ризик",
+                        "resultName": "Ri",
+                        "mapObject": null,
+                        "guiID": "model2-gui",
+                        "validateData": function() {
+                            var data = [
+                                $("#model-square").val(),
+                                $("#m2_h").val(),
+                                $("#m2_phi_min").val(),
+                                $("#m2_phi_max").val(),
+                            ];
+
+                            for (var i = 0; i < data.length; i++) {
+                                var value = data[i];
+                                if (gf_isEmpty(value) === true) {
+                                    return false;
+                                }
+                            }
+
+                            return true;
+                        },
+                        "getData": function() {
+                            var data = {
+                                square: $("#model-square").val(),
+                                h: $("#m2_h").val(),
+                                phi_min: $("#m2_phi_min").val(),
+                                phi_max: $("#m2_phi_max").val(),
                             };
 
                             return data;
@@ -441,28 +592,41 @@
                     }
                 </script>
 
-<!--                 <div id="model2-gui" class="card" style="display:none;">
+                <div id="model3-gui" class="card" style="display:none;">
                     <div class="data-form">
-                        <form id="form-model2" action="" method="post">
-                            <h4>Модель 2</h4>
-                            <label for="circle-square">Площа (м. кв.)</label>
-                            <input type="text" id="circle-square" name="circle-square" placeholder="0.0">
-
-                            <label for="circle-square">Кількість постраждалих (одиниць)</label>
-                            <input type="text" id="count" name="count" placeholder="1.0" value="1.0">
-
-                            <input type="submit" value="Розрахувати">
-                        </form>
+                        <h4>Modeel 3</h4>
                     </div>
                 </div>
 
                 <script type="text/javascript">
-                    gv_models["model2"] = {
-                        "formID": "form-model2",
-                        "guiID": "model2-gui",
-                        "getData": function() {return "No data";}
+                    gv_models["agriculture-costs"] = {
+                        "name": "Збитки від вилучення або порушення сільськогосподарських угідь та втрат тваринництва",
+                        "resultName": "P", 
+                        "mapObject": null,
+                        "guiID": "model3-gui",
+                        "validateData": function() {
+                            var data = [
+                                // $("#m1_square").val(),
+                            ];
+
+                            for (var i = 0; i < data.length; i++) {
+                                var value = data[i];
+                                if (gf_isEmpty(value) === true) {
+                                    return false;
+                                }
+                            }
+
+                            return true;
+                        },
+                        "getData": function() {
+                            var data = {
+                                // square: $("#m1_square").val(),
+                            };
+
+                            return data;
+                        }
                     }
-                </script> -->
+                </script>
 {% endblock %}}
 
 
